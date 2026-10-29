@@ -1,4 +1,4 @@
-# 白山茶 · 手控绽放
+﻿# 白山茶 · 手控绽放
 
 **在线预览 → https://zyr123-star.github.io/camellia-bloom/**
 （HTTPS，摄像头可用；桌面 Chrome / Edge 体验最佳）
@@ -186,7 +186,7 @@ pos += d / (length(d) + 1e-4) * exp(-dot(d,d) * 30.0) * uTipPower * 0.045;
 
 // 两面受光的假光照 + 边缘透光 + 景深衰减
 float diff = abs(dot(wn, L));
-float shade = 0.34 + 0.82 * diff + 0.55 * pow(1.0 - abs(wn.z), 2.0);
+float shade = 0.72 + 0.40 * diff + 0.20 * pow(1.0 - abs(wn.z), 2.0);
 ```
 
 整个过程 **CPU 每帧只更新 3 个 uniform**（spread / time / 指尖），零顶点计算。

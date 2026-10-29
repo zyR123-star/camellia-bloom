@@ -1,5 +1,8 @@
 # 白山茶 · 手控绽放
 
+**在线预览 → https://zyr123-star.github.io/camellia-bloom/**
+（HTTPS，摄像头可用；桌面 Chrome / Edge 体验最佳）
+
 一握手，花收成一枚苞；一张开手掌，白山茶便一层一层散开，跟着手走，指尖还能轻轻拨动花瓣。
 
 Three.js 粒子 + MediaPipe Hands 21 关键点 + 自定义 GLSL，纯原生 ES Module，无需构建。

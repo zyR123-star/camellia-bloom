@@ -1,0 +1,14 @@
+# 依赖 / 构建产物
+node_modules/
+dist/
+.vite/
+
+# 离线预览渲染出来的图（体积大，属于本地调试产物）
+preview-out/
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

@@ -15,6 +15,7 @@ import { Camellia } from './flower.js';
 import { HandTracker } from './handTracker.js';
 import { Backdrop } from './backdrop.js';
 import { HandPreview } from './handPreview.js';
+import { createBouquetDecor } from './bouquet.js';
 
 /* ------------------------------------------------------------------ */
 /* 可调参数                                                            */
@@ -30,6 +31,9 @@ const CFG = {
   TENSION_TAU_CLOSE: 0.055,
   // 空闲呼吸
   IDLE_SPEED: 0.42,
+  // 花苞时纸口下移，盛开时略上提，只包住花冠底部
+  FRONT_PAPER_CLOSED_Y: -0.72,
+  FRONT_PAPER_OPEN_Y: -0.62,
 };
 
 const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -82,12 +86,6 @@ class App {
     this.scaleCur = 1;
     this.scaleTarget = 1;
 
-    // 拖拽旋转
-    this.yaw = 0;
-    this.pitch = 0;
-    this.yawTarget = 0;
-    this.pitchTarget = 0;
-    this.dragging = false;
     this.pointerDown = false;
     this.spaceHold = false;
     this.demoPress = 0;
@@ -121,11 +119,41 @@ class App {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.1, 100);
 
+    this.bouquet = new THREE.Group();
+    const bouquetDecor = createBouquetDecor({
+      branchCount: Math.round(PARTICLE_COUNT * 0.16),
+    });
+    this.frontPaper = bouquetDecor.getObjectByName('front-paper');
+    this.decorFlowers = bouquetDecor.getObjectByName('decor-flowers');
+    this.bouquet.add(bouquetDecor);
+    this.scene.add(this.bouquet);
+
+    const primaryCount = Math.round(PARTICLE_COUNT * 0.62);
     this.flower = new Camellia({
       scene: this.scene,
       camera: this.camera,
-      count: PARTICLE_COUNT,
+      count: primaryCount,
     });
+    this.flowerBack = new Camellia({
+      scene: this.scene,
+      camera: this.camera,
+      count: PARTICLE_COUNT - primaryCount,
+    });
+    this.flowers = [this.flower, this.flowerBack];
+
+    this.flower.root.position.set(-0.38, 0.38, 0.30);
+    this.flower.root.scale.setScalar(0.55);
+    this.flower.root.rotation.y = -0.12;
+    this.flowerBack.root.position.set(0.34, -0.10, 0.18);
+    this.flowerBack.root.scale.setScalar(0.51);
+    this.flowerBack.root.rotation.y = 0.24;
+    this.flower.uniforms.uGain.value = 0.72;
+    this.flowerBack.uniforms.uGain.value = 0.58;
+    this.flower.halo.visible = false;
+    this.flowerBack.halo.visible = false;
+    this.bouquet.add(this.flower.root, this.flowerBack.root);
+    this.bouquetScale = 0.74;
+    this.bouquet.scale.setScalar(this.bouquetScale);
 
     this.bg = new Backdrop();
     this.pip = new HandPreview($('pip-canvas'));
@@ -164,38 +192,19 @@ class App {
       this.paused = document.hidden;
     });
 
-    // 拖拽旋转（鼠标 / 触摸）
+    // 按压只用于演示模式，花朵方向保持固定
     const stage = $('stage');
-    let lastX = 0;
-    let lastY = 0;
 
     stage.addEventListener('pointerdown', (e) => {
-      this.dragging = true;
       this.pointerDown = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
       stage.setPointerCapture?.(e.pointerId);
     });
 
-    stage.addEventListener('pointermove', (e) => {
-      if (!this.dragging) return;
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      this.yawTarget = clamp(this.yawTarget + dx * 0.005, -0.65, 0.65);
-      this.pitchTarget = clamp(this.pitchTarget + dy * 0.004, -0.42, 0.42);
-    });
-
-    const endDrag = () => {
-      this.dragging = false;
+    const endPress = () => {
       this.pointerDown = false;
     };
-    window.addEventListener('pointerup', endDrag);
-    window.addEventListener('pointercancel', endDrag);
-    stage.addEventListener('pointerleave', () => {
-      this.dragging = false;
-    });
+    window.addEventListener('pointerup', endPress);
+    window.addEventListener('pointercancel', endPress);
 
     // 键盘
     window.addEventListener('keydown', (e) => {
@@ -215,7 +224,7 @@ class App {
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.renderer.setSize(w, h, false);
-    this.flower.resize();
+    for (const flower of this.flowers) flower.resize();
     this.pip.resize();
   }
 
@@ -274,18 +283,30 @@ class App {
         .then(() => this.toast('举起手 · 掌心朝向摄像头', 3200))
         .catch((err) => {
           console.warn('[camellia] hand model warmup failed:', err);
-          this.tracker?.close();
-          this.tracker = null;
-          $('mode-label').textContent = '演示';
-          $('hint').classList.remove('on');
-          this.toast('手部模型加载失败 · 已进入演示模式（按住屏幕模拟张开手掌）', 5200);
+          this._fallbackToDemo('手部模型加载失败 · 已进入演示模式（按住屏幕模拟张开手掌）');
         });
     } catch (err) {
-      this.tracker = null;
-      $('mode-label').textContent = '演示';
-      this.toast('手部识别组件加载失败 · 已进入演示模式（按住屏幕模拟张开手掌）', 5200);
       console.warn('[camellia] hand tracker init failed:', err);
+      this._fallbackToDemo('手部识别组件加载失败 · 已进入演示模式（按住屏幕模拟张开手掌）');
     }
+  }
+
+  _fallbackToDemo(message) {
+    this.tracker?.close();
+    this.tracker = null;
+    this.stream?.getTracks().forEach((track) => track.stop());
+    this.stream = null;
+    if (this.video) {
+      this.video.pause();
+      this.video.srcObject = null;
+      this.video = null;
+    }
+    this.mode = 'demo';
+    this.setPip(false);
+    this.hud.classList.add('on');
+    $('mode-label').textContent = '演示';
+    this.hint.classList.remove('on');
+    this.toast(message, 5200);
   }
 
   _handleCameraError(err) {
@@ -401,14 +422,15 @@ class App {
     // 5) 花朵跟随手
     this._followHand(hand, dt);
 
-    // 6) 拖拽旋转阻尼
-    this.yaw = approach(this.yaw, this.yawTarget, dt, 0.18);
-    this.pitch = approach(this.pitch, this.pitchTarget, dt, 0.18);
-    this.flower.setUserRotation(this.yaw, this.pitch);
-
-    // 7) 更新花朵 + 叠加层
+    // 6) 更新花朵 + 叠加层
     const spread = FORCED_SPREAD !== null ? FORCED_SPREAD : this.spread;
-    this.flower.update(dt, spread);
+    this.frontPaper.position.y = THREE.MathUtils.lerp(
+      CFG.FRONT_PAPER_CLOSED_Y,
+      CFG.FRONT_PAPER_OPEN_Y,
+      spread,
+    );
+    this.decorFlowers.userData.setSpread(spread);
+    for (const flower of this.flowers) flower.update(dt, spread);
     this.bg.update(dt);
 
     // 背景渐变 → 花，同一条不透明管线
@@ -418,7 +440,7 @@ class App {
 
     this._drawPip(hand, dt);
 
-    // 8) HUD
+    // 7) HUD
     this._updateHud(hand);
   }
 
@@ -450,19 +472,22 @@ class App {
       // 指尖排斥
       const tx = W * (0.5 + clamp((1 - hand.tip.x - 0.5) * 2, -1, 1) * 0.30);
       const ty = H * (0.5 + clamp((hand.tip.y - 0.5) * 2, -1, 1) * 0.24);
-      this.flower.setFingertip(this.flower.screenToPlane(tx, ty), 0.35 + 0.65 * this.spread);
+      const tip = this.flower.screenToPlane(tx, ty);
+      for (const flower of this.flowers) {
+        flower.setFingertip(tip, 0.35 + 0.65 * this.spread);
+      }
     } else {
       // 没人：回到画面中央，缓缓呼吸
       this.anchorTarget.set(0, 0, 0);
       this.scaleTarget = 1;
-      this.flower.setFingertip(null, 0);
+      for (const flower of this.flowers) flower.setFingertip(null, 0);
     }
 
     this.anchor.lerp(this.anchorTarget, frameEase(0.09, dt));
     this.scaleCur = approach(this.scaleCur, this.scaleTarget, dt, 0.25);
 
-    this.flower.root.position.copy(this.anchor);
-    this.flower.root.scale.setScalar(this.scaleCur);
+    this.bouquet.position.copy(this.anchor);
+    this.bouquet.scale.setScalar(this.bouquetScale * this.scaleCur);
   }
 
   _updateHud(hand) {
@@ -529,10 +554,3 @@ if (document.readyState === 'loading') {
 } else {
   boot();
 }
-
-
-
-
-
-
-

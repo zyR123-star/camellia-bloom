@@ -184,10 +184,8 @@ export class Camellia {
     this.spread = 0;
     this.time = 0;
     this.sizeMul = 1;
-    this.userYaw = 0;
-    this.userPitch = 0;
 
-    // 场景层级：root（跟手） → tilt（拖拽/呼吸摆动） → points
+    // 场景层级：root（跟手） → tilt（固定姿态） → points
     this.root = new THREE.Group();
     this.tilt = new THREE.Group();
     this.root.add(this.tilt);
@@ -351,16 +349,8 @@ export class Camellia {
     this.halo.scale.setScalar(s);
     this.halo.material.opacity = 0.10 + spread * 0.20;
 
-    // 花随时间慢转，保持“活着”的感觉
-    this.tilt.rotation.y = this.time * 0.06 + this.userYaw;
-    this.tilt.rotation.x = Math.sin(this.time * 0.3) * 0.03 + this.userPitch;
+    // 方向固定在最佳观赏角度，只保留花蕊浮尘的轻微流动
     this.motes.rotation.y = this.time * 0.02;
-  }
-
-  /** 拖拽带来的额外旋转 */
-  setUserRotation(yaw, pitch) {
-    this.userYaw = yaw;
-    this.userPitch = pitch;
   }
 
   /** 指尖位置（世界坐标）→ 排斥力 */

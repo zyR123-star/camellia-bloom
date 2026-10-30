@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "手势控制的白山茶粒子绽放 · Three.js + MediaPipe Hands",
+  "description": "手势控制的重瓣白山茶花束 · Three.js + MediaPipe Hands",
   "scripts": {
     "start": "node serve.mjs",
     "dev": "node serve.mjs",

@@ -6,7 +6,7 @@
  * 在 Node 里做离线软件渲染，方便没有显卡时调形。
  *
  * 核心思路
- *   一朵花 = 3 轮花瓣（外/中/内）+ 花蕊，共 18 片花瓣。
+ *   一朵花 = 3 轮花瓣（外/中/内）+ 花蕊，共 23 片花瓣。
  *   每片花瓣先用参数曲面 P(s, a) 描述：
  *       s ∈ [0,1]  由花瓣基部到尖端
  *       a ∈ [-1,1] 横向（a=±1 是花瓣左右边缘）
@@ -60,29 +60,29 @@ export const WHORLS = [
   {
     // 外轮：宽大的倒卵形花瓣，接近水平、瓣尖微微外翻（山茶开足时的样子）
     name: 'outer',
-    petals: 7,
+    petals: 9,
     azOffset: 0.0,
     delay: 0.0,
     bud: { beta: 0.150, L: 0.690, W: 0.290, rBase: 0.200, cup: 0.72, curl: 0.30, twist: 0.26, y0: -0.30 },
-    bloom: { beta: 1.285, L: 0.880, W: 0.505, rBase: 0.100, cup: 0.98, curl: 0.16, twist: 0.0, y0: -0.15 },
+    bloom: { beta: 1.285, L: 0.880, W: 0.455, rBase: 0.100, cup: 0.98, curl: 0.16, twist: 0.0, y0: -0.15 },
   },
   {
     // 中轮：立起来的浅杯，花瓣中脊受光
     name: 'middle',
-    petals: 6,
+    petals: 8,
     azOffset: 0.55,
     delay: 0.09,
     bud: { beta: 0.105, L: 0.750, W: 0.250, rBase: 0.155, cup: 0.62, curl: 0.26, twist: 0.30, y0: -0.28 },
-    bloom: { beta: 1.010, L: 0.850, W: 0.470, rBase: 0.140, cup: 1.02, curl: 0.36, twist: 0.0, y0: -0.13 },
+    bloom: { beta: 1.010, L: 0.850, W: 0.415, rBase: 0.140, cup: 1.02, curl: 0.36, twist: 0.0, y0: -0.13 },
   },
   {
     // 内轮：向上收拢成杯口，围住金色花蕊
     name: 'inner',
-    petals: 5,
+    petals: 6,
     azOffset: 1.10,
     delay: 0.18,
     bud: { beta: 0.060, L: 0.785, W: 0.225, rBase: 0.115, cup: 0.54, curl: 0.20, twist: 0.34, y0: -0.26 },
-    bloom: { beta: 0.700, L: 0.710, W: 0.380, rBase: 0.180, cup: 1.05, curl: 0.56, twist: 0.0, y0: -0.12 },
+    bloom: { beta: 0.700, L: 0.710, W: 0.335, rBase: 0.180, cup: 1.05, curl: 0.56, twist: 0.0, y0: -0.12 },
   },
 ];
 
@@ -357,7 +357,7 @@ export function buildFlowerParticles(opts = {}) {
       // 花心纵向环境光遮蔽：花瓣基部被上层花瓣压住，本来就该暗一圈。
       // 这一圈阴影是「金色花蕊」作为一个独立色块跳出来的前提。
       const rb = Math.hypot(ox, oz);
-      const ao = 0.46 + 0.54 * smoothstep(0.10, 0.64, rb);
+      const ao = 0.30 + 0.70 * smoothstep(0.10, 0.64, rb);
 
       const k = jitter * sheen * edgeSpray * edgeFade * ao;
       color[i * 3] = col[0] * k * (1 + pt.warm);

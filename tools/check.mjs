@@ -12,7 +12,7 @@
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildFlowerParticles } from '../src/flowerGeometry.js';
+import { WHORLS, buildFlowerParticles } from '../src/flowerGeometry.js';
 import { measureTension } from '../src/handTracker.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -143,6 +143,8 @@ ok('缓动 60 帧后 ≈ 0.998（约 1 秒到位）', frames[59] > 0.99, `=${fra
 /* 3. 几何数据                                                        */
 /* ------------------------------------------------------------------ */
 console.log('\n\x1b[1m3) 粒子几何\x1b[0m');
+const petalCount = WHORLS.reduce((sum, whorl) => sum + whorl.petals, 0);
+ok('重瓣花冠为 20-30 片', petalCount >= 20 && petalCount <= 30, `${WHORLS.map((w) => w.petals).join('/')} = ${petalCount}`);
 for (const n of [5000, 14000, 20000]) {
   const p = buildFlowerParticles({ count: n });
   const allArrays = [p.bud, p.bloom, p.normalBud, p.normalBloom, p.color, p.size, p.seed, p.delay];
@@ -241,7 +243,7 @@ console.log('\n\x1b[1m5) DOM 契约与模块引用\x1b[0m');
 
   // 每个模块 import 的相对路径都必须真实存在
   const files = [
-    'src/main.js', 'src/flower.js', 'src/backdrop.js', 'src/skeleton.js',
+    'src/main.js', 'src/flower.js', 'src/bouquet.js', 'src/backdrop.js', 'src/skeleton.js',
     'src/handTracker.js', 'src/handPreview.js',
   ];
   const badImports = [];

@@ -9,7 +9,7 @@
  *   3. 数据结构：粒子数、NaN、包围盒，以及着色器属性名与几何属性是否对得上
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WHORLS, buildFlowerParticles } from '../src/flowerGeometry.js';
@@ -259,6 +259,34 @@ console.log('\n\x1b[1m5) DOM 契约与模块引用\x1b[0m');
     }
   }
   ok('相对 import 路径全部存在', badImports.length === 0, badImports.join(', ') || 'ok');
+}
+
+/* ------------------------------------------------------------------ */
+/* 6. 本地运行时资源                                                   */
+/* ------------------------------------------------------------------ */
+console.log('\n\x1b[1m6) 本地运行时资源\x1b[0m');
+{
+  const html = readFileSync(join(root, 'index.html'), 'utf8');
+  const trackerSrc = readFileSync(join(root, 'src', 'handTracker.js'), 'utf8');
+  const assets = [
+    'vendor/three/three.module.js',
+    'vendor/mediapipe/hands/hands.js',
+    'vendor/mediapipe/hands/hands_solution_simd_wasm_bin.wasm',
+    'vendor/mediapipe/hands/hands_solution_wasm_bin.wasm',
+    'vendor/mediapipe/hands/hand_landmark_full.tflite',
+    'vendor/mediapipe/hands/hand_landmark_lite.tflite',
+  ];
+  const missing = assets.filter((rel) => {
+    try {
+      return statSync(join(root, rel)).size <= 0;
+    } catch {
+      return true;
+    }
+  });
+  ok('Three.js 使用本地 vendor 路径', html.includes('"three": "./vendor/three/three.module.js"'));
+  ok('MediaPipe 使用本地 vendor 路径', trackerSrc.includes("new URL('../vendor/mediapipe/hands'"));
+  ok('运行时代码不依赖 jsDelivr', !/cdn\.jsdelivr/.test(html + trackerSrc));
+  ok('本地运行时资源完整', missing.length === 0, missing.join(', ') || `${assets.length} 个`);
 }
 
 /* ------------------------------------------------------------------ */console.log(`\n\x1b[1m结果：${pass} 通过，${fail} 失败\x1b[0m\n`);

@@ -16,7 +16,7 @@
 |---|---|
 | 在线演示（HTTPS，摄像头可用） | https://zyr123-star.github.io/camellia-bloom/ |
 | 源码 | https://github.com/zyr123-star/camellia-bloom |
-| 技术栈 | 原生 ES Module + Three.js r169（CDN）+ MediaPipe Hands + GLSL，无构建 |
+| 技术栈 | 原生 ES Module + Three.js r169（本地）+ MediaPipe Hands（本地）+ GLSL，无构建 |
 
 ## 二、当前状态
 
@@ -30,8 +30,8 @@ node serve.mjs           # → http://localhost:5173
 **2026-10-30 浏览器验收结果**：
 
 - Edge 无头浏览器使用 SwiftShader 建起 WebGL 2，着色器编译通过，双主花共 16000 粒子正常绘制
-- Three.js 与 MediaPipe CDN 均成功加载；假摄像头触发真实推理并拿到结果帧
-- 阻断 MediaPipe CDN 后已验证：停止摄像头、隐藏手部小窗、切到演示模式，按住可正常开花
+- Three.js 与 MediaPipe 从本地 `vendor/` 加载；假摄像头触发真实推理并拿到结果帧
+- 阻断全部外部请求后已验证：页面、Three.js、MediaPipe wasm 与模型都从本地加载
 - 1440×900 与 390×844 两种视口均无横向溢出；移动端自动降至 9000 粒子
 - 尚未验证：真人摄像头画面、真实手机设备、长时间运行稳定性
 
@@ -44,6 +44,7 @@ node serve.mjs           # → http://localhost:5173
 index.html            importmap 映射 three.js；DOM 结构（开场页 / HUD / 手部小窗 / 帮助）
 styles.css            全套界面样式（墨绿夜色 / 玉白 / 一点金）
 serve.mjs             零依赖静态服务器（camera 需要 localhost 或 https）
+vendor/               Three.js 与 MediaPipe Hands 的本地运行时资源
 src/
   main.js             主控：状态机、tension→spread、跟随、HUD、错误降级、键盘/指针
   bouquet.js          程序绘制包装纸、粒子花枝、细枝小花、卡片与缎带
@@ -75,7 +76,7 @@ tools/
 3. **大画面不显示摄像头**。白花需要干净深背景；手只看右下角小窗。
    因此跟随不需要像素级对齐，只把手的归一化位置映射成画面中的有限位移（±30% / ±24%）。
 4. **用 legacy `@mediapipe/hands` 而不是 tasks-vision**：前者 wasm + 模型都在同一个 npm 包里，
-   一个 CDN 源就能跑通；后者还要从 storage.googleapis.com 拉模型。
+   可以整包镜像到 `vendor/`；后者还要从 storage.googleapis.com 拉模型。
 5. **错误必须降级不白屏**：模型加载失败 → 演示模式（呼吸 + 按住模拟张开）。
 6. **花束有明确渲染层级**：后层包装纸 0 → 粒子花枝 1 → 粒子花 2 →
    前层包装纸 2.5 → 缎带 3。前层纸负责遮住枝干汇合处并包住花冠底部，
@@ -142,8 +143,8 @@ URL 调试参数：`?spread=0.5`（锁定绽放度并跳过开场页）、`?demo
 1. **视觉是否达标等待确认**。当前已改为 9/8/6 = 23 片重瓣，并收窄盛开态花瓣、加深花心遮蔽。
    浏览器与离线成片中金蕊已经形成独立色块，但仍需真人最终确认审美效果。
 2. **移动端未真机测试**。390px 视口已通过浏览器检查，但尚未跑真实手机摄像头。
-3. **无完全离线兜底**。MediaPipe CDN 失败已能降级；three.js 仍从 jsDelivr 加载。
-   要完全离线，需本地化 three.js，并把 `@mediapipe/hands@0.4.1675469240` 整包镜像后改 `MP_BASE`。
+3. **运行时依赖已本地化**。Three.js 与 `@mediapipe/hands@0.4.1675469240`
+   的 wasm / 模型都放在 `vendor/`，发布时必须整目录上传，不要改回外部 CDN。
 4. **手部识别精度未用真人数据校准**。tension 的系数（1.18 / 0.87 / 0.62 / 0.38）
    是基于合成手型推的，真人可能偏灵敏或偏迟钝，需要现场微调。
 
@@ -171,7 +172,7 @@ node tools/preview.mjs
 - **PowerShell 双引号里 `$(...)` 会被当子表达式展开**。用字符串替换改 JS 代码时，
   含 `$('id')` 或模板字符串的内容会被吃掉。要么用单引号 / here-string，要么直接用编辑工具。
 - **headless Chrome / Edge 起不来**（进程挂死），所以没法截图验证。
-- 沙箱 shell **不能直连外网**（jsDelivr 等 TLS 失败），但 `gh` 可以。
+- 外网 API 偶有 TLS 超时；当前运行时已不依赖外网，只有发布和更新依赖时需要联网。
 
 ## 九、许可
 

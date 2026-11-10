@@ -3,15 +3,14 @@
  * ---------------------------------------------------------------
  * 用 @mediapipe/hands（legacy solution）而不是 tasks-vision：
  *   legacy 包的 wasm / tflite 模型全都在同一个 npm 包里，
- *   只需一个 CDN 源（jsDelivr）即可跑通，国内网络环境更稳；
+ *   本地镜像后无需访问任何外部服务；
  *   tasks-vision 需要额外从 storage.googleapis.com 拉 .task 模型，
  *   那条线路在部分地区不通。
  *
  * 如果它加载失败，上层会自动进入「演示模式」，页面不会白屏。
  */
 
-const MP_VERSION = '0.4.1675469240';
-const MP_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/hands@${MP_VERSION}`;
+const MP_BASE = new URL('../vendor/mediapipe/hands', import.meta.url).href;
 
 /** MediaPipe 的 21 点骨架连线 */
 export const HAND_CONNECTIONS = [
@@ -165,7 +164,7 @@ export class HandTracker {
       s.onload = () => { clearTimeout(timer); resolve(); };
       s.onerror = () => {
         clearTimeout(timer);
-        reject(new Error('无法从 CDN 加载 MediaPipe Hands'));
+        reject(new Error('无法加载本地 MediaPipe Hands'));
       };
       document.head.appendChild(s);
     });

@@ -31,8 +31,8 @@ npx vite                  # 也可以，项目本身就是原生 ESM
 
 打开页面 → 点「开启摄像头」→ 举起手，掌心朝向镜头。
 
-> 第一次会从 jsDelivr 拉 three.js 与 MediaPipe（约 6 MB，有缓存）。
-> 如果网络拉不到手部模型，页面会**自动进入演示模式**：花朵照常呼吸，按住鼠标/屏幕即可模拟「张开手掌」，不会白屏。
+> Three.js 与 MediaPipe Hands 已随项目本地携带，无需访问外部 CDN。
+> 如果本地手部模型文件缺失，页面会**自动进入演示模式**：花朵照常呼吸，按住鼠标/屏幕即可模拟「张开手掌」，不会白屏。
 
 ---
 
@@ -76,7 +76,7 @@ npx netlify deploy --prod --dir=.
 也可以推到 GitHub 用 Pages / Cloudflare Pages 托管。注意两点：
 
 1. 不要用 `file://` 打开，必须走 HTTP 服务
-2. 对方机器要能访问 jsDelivr（three.js 与 MediaPipe 的资源和模型都从那取）
+2. 项目需要完整上传，包括 `vendor/` 下的 Three.js 与 MediaPipe 资源
 
 ---
 
@@ -224,6 +224,7 @@ camellia-bloom/
 ├── index.html              入口：importmap 映射 three.js
 ├── styles.css              墨绿夜色 / 玉白 / 一点金 的界面
 ├── serve.mjs               零依赖静态服务器（自动打印局域网地址）
+├── vendor/                 本地 Three.js 与 MediaPipe Hands 资源
 ├── src/
 │   ├── main.js             状态机、tension→spread、跟随、HUD、错误降级
 │   ├── flowerGeometry.js   ★ 纯数学：花瓣曲面、双姿态、法向、颜色（不依赖 three）
@@ -291,10 +292,10 @@ node tools/sweep.mjs      # 输出参数对比拼图 sweep.png
 必须是 `http://localhost` 或 `https`。用 `file://` 打开会被浏览器直接拒绝。
 
 **一直显示「正在加载手部模型」**
-`@mediapipe/hands` 的 wasm 与 tflite 模型要从 jsDelivr 拉。网络不通时会自动降级到演示模式（只是没有手势识别，花照常开）。若需要完全离线，可把 `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/` 整包镜像到本地，改 `src/handTracker.js` 里的 `MP_BASE`。
+检查 `vendor/mediapipe/hands/` 是否完整上传，尤其是 `.wasm`、`.tflite` 和 `.data` 文件。资源缺失时会自动降级到演示模式。
 
 **为什么用 legacy `@mediapipe/hands` 而不是 tasks-vision**
-legacy 包的 wasm + 模型全部在同一个 npm 包里，一个 CDN 源就能跑通；`tasks-vision` 还要额外从 `storage.googleapis.com` 拉 `.task` 模型，那条线路在部分地区不稳定。整个追踪层是 `HandTracker` 一个类，想换实现只改这一个文件。
+legacy 包的 wasm + 模型全部在同一个 npm 包里，适合整包本地化；`tasks-vision` 还要额外从 `storage.googleapis.com` 拉 `.task` 模型，那条线路在部分地区不稳定。整个追踪层是 `HandTracker` 一个类，想换实现只改这一个文件。
 
 **手部识别有点飘**
 `handTracker.js` 里 `modelComplexity`（0=lite / 1=full）和 `minTrackingConfidence` 可调；移动端默认 lite。
